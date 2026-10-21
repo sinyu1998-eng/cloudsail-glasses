@@ -2,9 +2,15 @@
   "pages": [
     "pages/index/index",
     "pages/visit/index",
-    "pages/capacity/index"
+    "pages/capacity/index",
+    "pages/translate/index",
+    "pages/notify/index",
+    "pages/shop/index"
   ],
-  "permissions": ["RECORD_AUDIO", "CAMERA"],
+  "permissions": [
+    "RECORD_AUDIO",
+    "CAMERA"
+  ],
   "window": {
     "navigationBarTitleText": "云帆现场助手"
   }

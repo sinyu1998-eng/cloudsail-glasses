@@ -11,6 +11,9 @@ export default {
     items: [
       { key: 'visit', label: '客户拜访' },
       { key: 'capacity', label: '产能/报价' },
+      { key: 'translate', label: '实时翻译' },
+      { key: 'notify', label: '消息推送' },
+      { key: 'shop', label: '商城下单' },
     ],
     focus: 0,
   },
@@ -26,27 +29,21 @@ export default {
   onKeyUp(event) {
     if (event.code === 'Enter') {
       const item = this.data.items[this.data.focus];
-      if (item.key === 'visit') {
-        window.open('pages/visit/index', '_self');
-      } else {
-        window.open('pages/capacity/index', '_self');
-      }
+      window.open('pages/' + item.key + '/index', '_self');
     }
   },
 
   onVoiceWakeup(event) {
     const t = (event.keyword || '') + '';
-    if (t.indexOf('拜访') >= 0 || t.indexOf('客户') >= 0) {
-      window.open('pages/visit/index', '_self');
-    } else if (t.indexOf('产能') >= 0 || t.indexOf('报价') >= 0) {
-      window.open('pages/capacity/index', '_self');
+    const map = [['拜访','visit'],['客户','visit'],['产能','capacity'],['报价','capacity'],
+                 ['翻译','translate'],['推送','notify'],['消息','notify'],['商城','shop'],['下单','shop']];
+    for (const [k, key] of map) {
+      if (t.indexOf(k) >= 0) { window.open('pages/' + key + '/index', '_self'); return; }
     }
   },
 
   tapItem(event) {
-    const key = event.target.dataset.key;
-    if (key === 'visit') window.open('pages/visit/index', '_self');
-    if (key === 'capacity') window.open('pages/capacity/index', '_self');
+    window.open('pages/' + event.target.dataset.key + '/index', '_self');
   },
 };
 </script>
