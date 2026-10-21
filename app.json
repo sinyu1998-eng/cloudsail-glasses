@@ -1,0 +1,11 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/visit/index",
+    "pages/capacity/index"
+  ],
+  "permissions": ["RECORD_AUDIO", "CAMERA"],
+  "window": {
+    "navigationBarTitleText": "云帆现场助手"
+  }
+}
