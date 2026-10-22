@@ -14,6 +14,7 @@ export default {
       { key: 'translate', label: '实时翻译' },
       { key: 'notify', label: '消息推送' },
       { key: 'shop', label: '商城下单' },
+      { key: 'profile', label: '客户档案' },
     ],
     focus: 0,
   },
@@ -36,7 +37,7 @@ export default {
   onVoiceWakeup(event) {
     const t = (event.keyword || '') + '';
     const map = [['拜访','visit'],['客户','visit'],['产能','capacity'],['报价','capacity'],
-                 ['翻译','translate'],['推送','notify'],['消息','notify'],['商城','shop'],['下单','shop']];
+                 ['翻译','translate'],['推送','notify'],['消息','notify'],['商城','shop'],['下单','shop'],['档案','profile'],['风险','profile']];
     for (const [k, key] of map) {
       if (t.indexOf(k) >= 0) { window.open('pages/' + key + '/index', '_self'); return; }
     }

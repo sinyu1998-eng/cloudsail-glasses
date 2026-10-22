@@ -5,7 +5,8 @@
     "pages/capacity/index",
     "pages/translate/index",
     "pages/notify/index",
-    "pages/shop/index"
+    "pages/shop/index",
+    "pages/profile/index"
   ],
   "permissions": [
     "RECORD_AUDIO",
