@@ -12,10 +12,16 @@ import { LanguageModel } from 'language-model';
 export default {
   data: {
     apiBase: 'http://192.168.1.100:8000',
-    state: 'idle',      // idle | listening | translating | done | error
+    state: 'idle',
     src: '',
     dst: '',
     errMsg: '',
+    langs: [
+      { code: 'en', label: '英语' },
+      { code: 'ru', label: '俄语' },
+      { code: 'es', label: '西班牙语' },
+    ],
+    langIdx: 0,
   },
   llm: null,
   session: null,
@@ -32,7 +38,7 @@ export default {
       this.llm = await LanguageModel.create({
         initialPrompts: [{
           role: 'system',
-          content: 'You are a business translator. Translate the user Chinese sentence into natural business English. Output ONLY the English translation, nothing else.'
+          content: 'You are a business translator. Translate the user Chinese sentence into the requested target language. Output ONLY the translation, nothing else.'
         }],
       });
     } catch (e) { this.llm = null; }
@@ -63,7 +69,13 @@ export default {
     try { rec.start(); } catch (e) { this.setData({ state: 'error', errMsg: '无法启动麦克风' }); }
   },
 
+  tapLang() {
+    const i = (this.data.langIdx + 1) % this.data.langs.length;
+    this.setData({ langIdx: i, dst: '', state: 'idle' });
+  },
+
   async translate(text) {
+    const target = this.data.langs[this.data.langIdx].label;
     let out = '';
     if (this.llm) {
       try { out = (await this.llm.prompt(text) || '').trim(); } catch (e) { out = ''; }
@@ -72,7 +84,7 @@ export default {
       try {
         const r = await fetch(this.data.apiBase + '/api/translate', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, target: 'en' }),
+          body: JSON.stringify({ text, target }),
         });
         if (r.ok) { const d = await r.json(); out = d.text || ''; }
       } catch (e) {}
@@ -95,6 +107,7 @@ export default {
     <text class="src" wx:if="{{src}}">{{src}}</text>
     <text class="dst" wx:if="{{dst}}">{{dst}}</text>
     <text class="err" wx:if="{{errMsg}}">{{errMsg}}</text>
+    <text class="lang" bindtap="tapLang">目标语言：{{langs[langIdx].label}}（点按切换）</text>
     <text class="go" bindtap="tapStart">▶ 重新说</text>
   </view>
 </page>
@@ -106,6 +119,7 @@ export default {
 .src { font-size: 13px; color: #7f7; line-height: 1.4; margin-bottom: 6px; }
 .dst { font-size: 15px; color: #ff0; line-height: 1.45; margin-bottom: 6px; }
 .err { font-size: 11px; color: #f66; }
+.lang { font-size: 12px; color: #ff0; margin: 4px 0; }
 .go { font-size: 13px; border: 1px solid #0f0; border-radius: 6px;
       padding: 5px 10px; align-self: flex-start; margin-top: 6px; }
 </style>
