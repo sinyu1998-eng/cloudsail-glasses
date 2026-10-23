@@ -37,6 +37,7 @@ export default {
     const rec = new SpeechRecognition();
     this.session = rec;
     rec.lang = 'zh-CN';
+    rec.interimResults = true;  // 边说边显示，降低感知延迟
     rec.onresult = (event) => {
       const res = event.results;
       if (!res || !res.length) return;

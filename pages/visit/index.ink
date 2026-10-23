@@ -84,17 +84,17 @@ export default {
     const rec = new SpeechRecognition();
     this.session = rec;
     rec.lang = 'zh-CN';
-    rec.interimResults = false;
+    rec.interimResults = true;
     rec.onresult = (event) => {
-      let text = '';
       const res = event.results;
-      if (res && res.length) {
-        const last = res[res.length - 1];
-        text = (last && last[0] && last[0].transcript) || '';
-      }
+      if (!res || !res.length) return;
+      const last = res[res.length - 1];
+      const text = (last && last[0] && last[0].transcript) || '';
       if (!text) return;
-      this.setData({ heard: text, state: 'parsing' });
-      this.parse(text);
+      // 中间结果：只刷新显示；最终结果（isFinal）才触发解析
+      const isFinal = last.isFinal !== false;
+      this.setData({ heard: text });
+      if (isFinal) { this.setData({ state: 'parsing' }); this.parse(text); }
     };
     rec.onerror = (event) => {
       this.setData({ state: 'error', errMsg: '识别失败：' + (event.error || '未知') });
