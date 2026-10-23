@@ -1,17 +1,10 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/visit/index",
-    "pages/capacity/index",
-    "pages/translate/index",
-    "pages/notify/index",
-    "pages/shop/index",
-    "pages/profile/index",
-    "pages/scan/index"
+    "pages/translate/index"
   ],
   "permissions": [
-    "RECORD_AUDIO",
-    "CAMERA"
+    "RECORD_AUDIO"
   ],
   "window": {
     "navigationBarTitleText": "云帆现场助手"
