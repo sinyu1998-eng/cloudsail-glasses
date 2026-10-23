@@ -11,12 +11,13 @@ import { LanguageModel } from 'language-model';
 
 export default {
   data: {
-    apiBase: 'http://192.168.1.100:8000',
+    apiBase: 'http://192.168.0.49:8000',
     state: 'idle',
     src: '',
     dst: '',
     errMsg: '',
     langs: [
+      { code: 'auto', label: '自动识别' },
       { code: '英语', label: '英语' },
       { code: '俄语', label: '俄语' },
       { code: '西班', label: '西班牙语' },
@@ -34,6 +35,7 @@ export default {
       { code: '印地', label: '印地语' },
     ],
     langIdx: 0,
+    detected: '',
   },
   llm: null,
   session: null,
@@ -50,7 +52,7 @@ export default {
       this.llm = await LanguageModel.create({
         initialPrompts: [{
           role: 'system',
-          content: 'You are a business translator. Translate the user Chinese sentence into the requested target language. Output ONLY the translation, nothing else.'
+          content: 'You are a business translator. The user message starts with a tag like [英语] or [AUTO], followed by a sentence. Translate the sentence into the language named in the tag. If the tag is [AUTO]: translate Chinese into English, and any other language into Chinese. Output ONLY the translation, nothing else.'
         }],
       });
     } catch (e) { this.llm = null; }
@@ -88,10 +90,12 @@ export default {
   },
 
   async translate(text) {
-    const target = this.data.langs[this.data.langIdx].label;
+    const lang = this.data.langs[this.data.langIdx];
+    const auto = lang.code === 'auto';
+    const target = auto ? 'auto' : lang.label;
     let out = '';
     if (this.llm) {
-      try { out = (await this.llm.prompt(text) || '').trim(); } catch (e) { out = ''; }
+      try { out = ((await this.llm.prompt((auto ? '[AUTO] ' : '[' + lang.label + '] ') + text)) || '').trim(); } catch (e) { out = ''; }
     }
     if (!out) {
       try {
@@ -99,7 +103,7 @@ export default {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text, target }),
         });
-        if (r.ok) { const d = await r.json(); out = d.text || ''; }
+        if (r.ok) { const d = await r.json(); out = d.text || ''; if (auto && d.detected) this.setData({ detected: d.detected }); }
       } catch (e) {}
     }
     if (!out) { this.setData({ state: 'error', errMsg: '翻译不可用（端侧模型与后端都不通）' }); return; }
@@ -108,8 +112,8 @@ export default {
   },
 
   stateText(s) {
-    return { idle: '按确认键开始说中文', listening: '请说…', translating: '翻译中…',
-             done: '已朗读英文', error: '出错了' }[s] || '';
+    return { idle: '按确认键，说什么语言都行', listening: '请说…', translating: '翻译中…',
+             done: '已朗读译文', error: '出错了' }[s] || '';
   },
 };
 </script>
@@ -120,7 +124,7 @@ export default {
     <text class="src" wx:if="{{src}}">{{src}}</text>
     <text class="dst" wx:if="{{dst}}">{{dst}}</text>
     <text class="err" wx:if="{{errMsg}}">{{errMsg}}</text>
-    <text class="lang" bindtap="tapLang">目标语言：{{langs[langIdx].label}}（点按切换）</text>
+    <text class="lang" bindtap="tapLang">{{langs[langIdx].label === '自动识别' ? '目标语言：自动（点按切换）' : '目标语言：' + langs[langIdx].label + '（点按切回自动）'}}</text>
     <text class="go" bindtap="tapStart">▶ 重新说</text>
   </view>
 </page>

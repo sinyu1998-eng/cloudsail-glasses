@@ -11,13 +11,15 @@ import { LanguageModel } from 'language-model';
 
 export default {
   data: {
-    apiBase: 'http://192.168.1.100:8000',   // TODO: 换成电脑局域网 IP
+    apiBase: 'http://192.168.0.49:8000',   // 电脑局域网 IP
     state: 'idle',        // idle | listening | parsing | done | error
     heard: '',
     card: null,           // 拜访结构化 {company, person, product, qty, note}
     quote: null,          // 三档报价 {ideal, deal, floor, leadDays}
     report: null,         // 产能上报结果 {line, output, issue}
     errMsg: '',
+    insight: null,        // 交流洞察 {langLabel, interest, signals[], suggestion}
+    profile: null,        // 客户档案 {level, levelText, risks[], advice}
     demoCost: 5.6,        // 演示单件成本（正式版从成本表读取，不由大模型生成）
   },
 
@@ -68,7 +70,7 @@ export default {
 
   startListen() {
     if (this.session) { try { this.session.abort(); } catch (e) {} }
-    this.setData({ state: 'listening', heard: '', card: null, quote: null, report: null, errMsg: '' });
+    this.setData({ state: 'listening', heard: '', card: null, quote: null, report: null, errMsg: '', insight: null, profile: null });
     const rec = new SpeechRecognition();
     this.session = rec;
     rec.lang = 'zh-CN';
@@ -81,8 +83,7 @@ export default {
       if (!text) return;
       const isFinal = last.isFinal !== false;
       this.setData({ heard: text });
-      if (isFinal) { this.setData({ state: 'parsing' }); this.parse(text); }
-    };
+      if (isFinal) { this.setData({ state: 'parsing' }); this.parse(text); }    };
     rec.onerror = (event) => {
       this.setData({ state: 'error', errMsg: '识别失败：' + (event.error || '未知') });
     };
@@ -93,6 +94,20 @@ export default {
   },
 
   async parse(text) {
+    // ① 交流洞察：自动识别语种 + 意向/信号/建议（合规：只分析对话文字，不采面部）
+    this.setData({ insight: null, profile: null });
+    try {
+      const r = await fetch(this.data.apiBase + '/api/insight', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (r.ok) {
+        const ins = await r.json();
+        this.setData({ insight: ins });
+        try { speechSynthesis.speak(new SpeechSynthesisUtterance(ins.suggestion), 'enqueue'); } catch (e) {}
+      }
+    } catch (e) {}
+
     // 产能上报：提到线体/产量/异常词就走 report
     if (/[一二三123]\s*号?线/.test(text) || /(不良|停机|故障|缺料|返工)/.test(text)) {
       this.doReport(text);
@@ -115,6 +130,13 @@ export default {
     if (!card) card = { company: '', person: '', product: text, qty: '', note: '' };
 
     this.setData({ card });
+    // ② 自动客户档案：识别到公司名立刻拉社媒档案 + 风险等级
+    if (card.company) {
+      try {
+        const pr = await fetch(this.data.apiBase + '/api/profile?name=' + encodeURIComponent(card.company));
+        if (pr.ok) this.setData({ profile: await pr.json() });
+      } catch (e) {}
+    }
     // 进 CRM（失败不阻塞报价）
     try {
       await fetch(this.data.apiBase + '/api/visits', {
@@ -183,6 +205,10 @@ export default {
     </block>
 
     <block wx:if="{{state === 'done'}}">
+      <block wx:if="{{insight}}">
+        <text class="ins">语种 {{insight.langLabel}} · 意向{{insight.interest}}{{insight.signals.length ? ' · ' + insight.signals : ''}}</text>
+        <text class="sug">→ {{insight.suggestion}}</text>
+      </block>
       <block wx:if="{{card}}">
         <text class="row">公司：{{card.company || '—'}}</text>
         <text class="row">联系人：{{card.person || '—'}}</text>
@@ -194,6 +220,9 @@ export default {
           <text class="p">理想 ¥{{quote.ideal}} ／ 成交 ¥{{quote.deal}} ／ 底价 ¥{{quote.floor}}</text>
           <text class="s">交期 {{quote.leadDays}} 天 · 演示成本 ¥{{demoCost}}/件 · 数字为公式计算，可审计</text>
         </view>
+      </block>
+      <block wx:if="{{profile}}">
+        <text class="risk">{{profile.levelText}} · {{profile.risks[0]}}</text>
       </block>
       <block wx:if="{{report}}">
         <view class="quote">
@@ -235,4 +264,7 @@ export default {
 }
 .tip { font-size: 10px; color: #4a4; margin-top: 8px; line-height: 1.5; }
 .err { font-size: 12px; color: #f66; }
+.ins { font-size: 12px; font-weight: bold; color: #ff0; margin-top: 6px; }
+.sug { font-size: 12px; color: #ff0; line-height: 1.4; }
+.risk { font-size: 11px; color: #f90; margin-top: 5px; line-height: 1.4; }
 </style>
